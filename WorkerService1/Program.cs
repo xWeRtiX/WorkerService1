@@ -1,3 +1,4 @@
+using Serilog;
 namespace WorkerService1
 {
     public class Program
@@ -5,6 +6,7 @@ namespace WorkerService1
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
+
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -16,6 +18,8 @@ namespace WorkerService1
                 WorkerOptions options = configuration.GetSection("Directories").Get<WorkerOptions>();
 
                 services.AddSingleton(options);
+
+                services.AddSingleton<IBackupService, BackupService>();
 
                 services.AddHostedService<Worker>();
             });

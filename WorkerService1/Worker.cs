@@ -1,46 +1,39 @@
+
 namespace WorkerService1
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
         private readonly WorkerOptions _options;
+        private readonly IBackupService _backupService;
 
-        public Worker(ILogger<Worker> logger, WorkerOptions options)
+        public Worker(ILogger<Worker> logger, WorkerOptions options, IBackupService backupService)
         {
             _logger = logger;
             _options = options;
+            _backupService = backupService;
+
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            int index = 0;
-            int errCounter = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
-                foreach (string path in _options.Files)
+                _backupService.Backup();
+                int err = 0;
+                foreach (string file in _options.Files)
                 {
-                    try
-                    {
-                        _logger.LogInformation("Worker running at: {time} and {dir} saving to the {backupDir}", DateTimeOffset.Now, path, _options.BackupDirectory);
-                        index++;
-                        string ext = Path.GetExtension(path);
-                        File.Copy(path, Path.Combine(_options.BackupDirectory + Path.GetFileNameWithoutExtension(path) + "-" + index + "-" + DateTimeOffset.Now.Year + "-" + DateTimeOffset.Now.Month + "-" + DateTimeOffset.Now.Day + "-" + DateTimeOffset.Now.Hour + "-" + DateTimeOffset.Now.Minute + "-" + DateTimeOffset.Now.Second + ext), true);
-
-                    }
-                    catch (FileNotFoundException e)
-                    {
-                        Console.WriteLine(e.Message);
-                        errCounter++;
-                    }
+                    if (!File.Exists(file)) err++;
 
                 }
-                index = 0;
-                if (errCounter == _options.Files.Length)
+                if (err == _options.Files.Length)
                 {
-                    Console.WriteLine("Zadané soubory neexistují");
+                    _logger.LogInformation("Neexistující soubory");
                     break;
                 }
-                await Task.Delay(_options.Interval * 1000, stoppingToken);
+                else await Task.Delay(_options.Interval * 1000, stoppingToken);
+                err = 0;
+
             }
         }
 
